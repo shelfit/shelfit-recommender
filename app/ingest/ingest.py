@@ -5,14 +5,17 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
 from sentence_transformers import SentenceTransformer
 
-client = QdrantClient(host='qdrant', port=6333)
-collection_name = 'books'
+from app.models import Settings
 
-if client.collection_exists(collection_name):
-    client.delete_collection(collection_name)
+settings = Settings() # noqa
+
+client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
+
+if client.collection_exists(settings.qdrant_collection_name):
+    client.delete_collection(settings.qdrant_collection_name)
 
 client.create_collection(
-    collection_name=collection_name,
+    collection_name=settings.qdrant_collection_name,
     vectors_config=VectorParams(size=768, distance=Distance.COSINE)
 )
 
@@ -22,7 +25,7 @@ file_path = os.path.join(str(base_dir), 'books.csv')
 df = pd.read_csv(file_path)
 df = df.dropna(subset=['title', 'author', 'description']).reset_index(drop=True)
 
-model = SentenceTransformer('BAAI/bge-base-en-v1.5')
+model = SentenceTransformer(settings.embedding_model)
 
 BATCH_SIZE = 32
 
@@ -54,7 +57,7 @@ points = [
 ]
 
 client.upload_points(
-    collection_name=collection_name,
+    collection_name=settings.qdrant_collection_name,
     wait=True,
     points=points
 )
