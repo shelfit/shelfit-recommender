@@ -1,0 +1,5 @@
+fastapi[standard]
+qdrant-client
+sentence-transformers
+python-dotenv
+pandas

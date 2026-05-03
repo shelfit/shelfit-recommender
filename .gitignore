@@ -1,0 +1,8 @@
+.venv
+qdrant_data
+.env
+.idea
+__pycache__/
+*.py[codz]
+*$py.class
+app/ingest/books.csv
