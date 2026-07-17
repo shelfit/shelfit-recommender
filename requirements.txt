@@ -4,3 +4,5 @@ sentence-transformers
 python-dotenv
 pandas
 openai
+sqlalchemy
+pymysql

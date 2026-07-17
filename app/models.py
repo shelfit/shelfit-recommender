@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 
 class QdrantSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_PATH)
+    model_config = SettingsConfigDict(env_file=ENV_PATH, extra="ignore")
 
     qdrant_host: str
     qdrant_port: int
@@ -15,16 +15,17 @@ class QdrantSettings(BaseSettings):
     embedding_model: str
 
 class OpenRouterSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_PATH)
+    model_config = SettingsConfigDict(env_file=ENV_PATH, extra="ignore")
 
     openrouter_base_uri: str
     openrouter_api_key: str
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_PATH)
+    model_config = SettingsConfigDict(env_file=ENV_PATH, extra="ignore")
 
     qdrant_settings: QdrantSettings = Field(default_factory=QdrantSettings)
     openrouter_settings: OpenRouterSettings = Field(default_factory=OpenRouterSettings)
+    gateway_mysql_url: str
 
 class RecommendRequest(BaseModel):
     query: str
