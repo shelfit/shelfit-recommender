@@ -1,31 +1,7 @@
 from enum import StrEnum
-from pathlib import Path
 from typing import List
-from pydantic import BaseModel, Field, ConfigDict
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, ConfigDict
 
-ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
-
-class QdrantSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_PATH, extra="ignore")
-
-    qdrant_host: str
-    qdrant_port: int
-    qdrant_collection_name: str
-    embedding_model: str
-
-class OpenRouterSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_PATH, extra="ignore")
-
-    openrouter_base_uri: str
-    openrouter_api_key: str
-
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_PATH, extra="ignore")
-
-    qdrant_settings: QdrantSettings = Field(default_factory=QdrantSettings)
-    openrouter_settings: OpenRouterSettings = Field(default_factory=OpenRouterSettings)
-    gateway_mysql_url: str
 
 class RecommendRequest(BaseModel):
     query: str
@@ -33,6 +9,7 @@ class RecommendRequest(BaseModel):
 class IntentItemType(StrEnum):
     AUTHOR = 'author'
     BOOK = 'book'
+    GENRE = 'genre'
 
 class IntentType(StrEnum):
     INCLUDE = "include"

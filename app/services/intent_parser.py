@@ -2,10 +2,10 @@ from openai import OpenAI
 from app.models import ParsedQueryIntent
 
 
-class IntentParserService:
+class IntentParser:
     prompt = """
         Your task is to parse queries in a book recommendation system. Your job is to:
-        1. Identify specific references to book titles or author names.
+        1. Identify specific references to book titles, author names or genres.
         2. Determine if each reference is something the user wants, doesn't want or is using as a similarity anchor
         3. Extract the remaining descriptive query (what kind of book, setting, mood, etc.)
         
@@ -22,10 +22,9 @@ class IntentParserService:
         positive intent toward future reading (I want more X... Show me Y).
         Use 'exclude' for any term with a negative connotation (I didn't like X and Y...
         or It shouldn't be like X or Y..., etc.).
-        If the anchor term is an author name, item_type should be 'author' and if it's a book title it should be
-        'book'. Also fix any obvious typos in the anchor terms (Sanderosn -> Sanderson, Mistbornn -> Mistborn).
-        Do NOT change names that could be real authors, even if they're unknown to you. When in doubt,
-        preserve the original.
+        If the anchor term is an author name, item_type should be 'author', if it's a book title it should be
+        'book', and if it's a genre it should be 'genre'. Also fix any obvious typos in the anchor terms (Sanderosn -> Sanderson, Mistbornn -> Mistborn).
+        Do NOT change names that could be real authors, even if they're unknown to you. When in doubt, preserve the original.
         Return the user's full query in the query_full field.
         
         If there is no extra context after extracting the anchor terms, leave query_context_residue as an
@@ -59,7 +58,10 @@ class IntentParserService:
         {
             "query_full": "cozy fantasy with a witch protagonist, no grimdark"
             "query_context_residue": "cozy fantasy with a witch protagonist, no grimdark",
-            "terms": []
+            "terms": [
+                {"item": "fantasy", "item_type": "genre", "intent": "include"},
+                {"item": "grimdark", "item_type": "genre", "intent": "exclude"}
+            ]
         }
         
         Query: "what should I read"

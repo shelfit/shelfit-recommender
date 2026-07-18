@@ -5,7 +5,7 @@ from qdrant_client.http.models import VectorParams, Distance, PointStruct
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import create_engine, text
 
-from app.models import Settings
+from app.core.config import Settings
 
 settings = Settings() # noqa
 
@@ -23,8 +23,8 @@ def format_genres(genres: str|list|None)-> str:
     return ",".join(genres_str)
 
 
-qdrant_client = QdrantClient(host=settings.qdrant_settings.qdrant_host, port=settings.qdrant_settings.qdrant_port)
-collection = settings.qdrant_settings.qdrant_collection_name
+qdrant_client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
+collection = settings.qdrant_collection_name
 
 if qdrant_client.collection_exists(collection):
     qdrant_client.delete_collection(collection)
@@ -54,7 +54,7 @@ with mysql_engine.connect() as conn:
             })
 
 
-embedding_model = SentenceTransformer(settings.qdrant_settings.embedding_model)
+embedding_model = SentenceTransformer(settings.embedding_model)
 embeddings = embedding_model.encode(
     [item["vector_str"] for item in vector_data],
     batch_size=EMBEDDING_BATCH_SIZE,
