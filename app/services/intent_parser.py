@@ -1,4 +1,11 @@
-from openai import OpenAI
+import logging
+
+from openai import OpenAI, APIError
+from openai.types.chat import ChatCompletionSystemMessageParam, \
+    ChatCompletionUserMessageParam
+from openai.types.shared_params import ResponseFormatJSONSchema
+from pydantic import ValidationError
+
 from app.models import ParsedQueryIntent
 
 
@@ -76,36 +83,49 @@ class IntentParser:
     def __init__(self, client: OpenAI):
         self.client = client
 
-    def parse(self, query_text: str)-> ParsedQueryIntent:
-        response = self.client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                { "role": "system", "content": self.prompt },
-                { "role": "user", "content": query_text }
-            ],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "parsed_query_intent",
-                    "schema": ParsedQueryIntent.model_json_schema(),
-                    "strict": True,
-                }
-            },
-            # extra_body={
-            #     "models": [
-            #         "google/gemma-4-26b-a4b-it:free",
-            #         "qwen/qwen3-next-80b-a3b-instruct:free",
-            #         "openai/gpt-oss-120b:free"
-            #     ],
-            #     "reasoning": {"enabled": False}
-            # }
+    def parse(self, query_text: str)-> ParsedQueryIntent|None:
+        messages = [
+            ChatCompletionSystemMessageParam(content=self.prompt, role="system"),
+            ChatCompletionUserMessageParam(content=query_text, role="user"),
+        ]
+
+        response_format = ResponseFormatJSONSchema(
+            type="json_schema",
+            json_schema={
+                "name": "ParsedQueryIntent",
+                "schema": ParsedQueryIntent.model_json_schema(),
+                "strict": True,
+            }
         )
 
-        return ParsedQueryIntent.model_validate_json(
-            self.removeJsonMarkdown(response.choices[0].message.content)
-        )
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=messages,
+                response_format=response_format,
+                # extra_body={
+                #     "models": [
+                #         "google/gemma-4-26b-a4b-it:free",
+                #         "qwen/qwen3-next-80b-a3b-instruct:free",
+                #         "openai/gpt-oss-120b:free"
+                #     ],
+                #     "reasoning": {"enabled": False}
+                # }
+            )
+        except APIError as e:
+            logging.error(f"Error parsing query intent: {e.message}")
+            return None
 
-    def removeJsonMarkdown(self, model_response: str)-> str:
+        try:
+            return ParsedQueryIntent.model_validate_json(
+                self._remove_json_markdown(response.choices[0].message.content)
+            )
+        except ValidationError as e:
+            logging.error(f"Error validating parsed query intent format: {e.message}")
+            return None
+
+
+    def _remove_json_markdown(self, model_response: str)-> str:
         if model_response.startswith('```'):
             model_response = model_response[3:]
 

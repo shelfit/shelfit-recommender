@@ -4,7 +4,7 @@ from sentence_transformers import SentenceTransformer
 
 from app.core.config import settings
 from app.deps import RecommendationServiceDep
-from app.models import RecommendRequest, ParsedQueryIntent
+from app.models import RecommendRequest
 
 app = FastAPI()
 
