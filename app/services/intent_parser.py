@@ -7,6 +7,7 @@ from openai.types.shared_params import ResponseFormatJSONSchema
 from pydantic import ValidationError
 
 from app.models import ParsedQueryIntent
+from app.utils.string_formatter_util import StringFormatterUtil
 
 
 class IntentParser:
@@ -118,20 +119,8 @@ class IntentParser:
 
         try:
             return ParsedQueryIntent.model_validate_json(
-                self._remove_json_markdown(response.choices[0].message.content)
+                StringFormatterUtil.remove_json_markdown(response.choices[0].message.content)
             )
         except ValidationError as e:
             logging.error(f"Error validating parsed query intent format: {e.message}")
             return None
-
-
-    def _remove_json_markdown(self, model_response: str)-> str:
-        if model_response.startswith('```'):
-            model_response = model_response[3:]
-
-            if model_response[:4].lower() == 'json':
-                model_response = model_response[4:]
-
-            model_response = model_response[:-3]
-
-        return model_response
