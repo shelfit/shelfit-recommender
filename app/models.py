@@ -2,7 +2,7 @@ from enum import StrEnum
 from typing import List
 from pydantic import BaseModel, ConfigDict, computed_field
 
-from app.utils.term_normalizer_util import TermNormalizerUtil
+from app.utils.string_formatter_util import StringFormatterUtil
 
 
 class RecommendRequest(BaseModel):
@@ -28,7 +28,7 @@ class IntentTerm(BaseModel):
     @computed_field
     @property
     def item_normalized(self)-> str:
-        return TermNormalizerUtil.normalize(self.item)
+        return StringFormatterUtil.normalize_term(self.item)
 
 class ParsedQueryIntent(BaseModel):
     model_config = ConfigDict(extra='forbid')

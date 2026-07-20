@@ -24,12 +24,15 @@ class IntentParser:
         query_context_residue
         In the terms property return a list of all the anchor terms you extracted. The terms should be separate JSON
         objects with intent, item_type and item keys. 
-        The intent has three possible values: 'include', 'exclude' and 'similar'.
-        Use 'similar' when a user expresses positive sentiment toward a book or author (I liked books X and Y... or
-        I like author A..., I read X books by author A, etc.) and use 'include' only when the user expresses
-        positive intent toward future reading (I want more X... Show me Y).
-        Use 'exclude' for any term with a negative connotation (I didn't like X and Y...
-        or It shouldn't be like X or Y..., etc.).
+        The intent has three possible values: 'include', 'exclude' and 'similar'. These are the use cases for those three:
+        
+        - 'include': the user wants results containing the term they named
+            cues: "something by X", "something in the Y genre", "more Z"
+        - 'similar': the user is naming reference points, not requirements:
+            cues: "something like X", "i liked Y", "i want more books like Z"
+        - 'exclude': the user doesn't want these terms showing up in results
+            cues: "i didn't like X", "not like Y", "no Z"
+        
         If the anchor term is an author name, item_type should be 'author', if it's a book title it should be
         'book', and if it's a genre it should be 'genre'. Also fix any obvious typos in the anchor terms (Sanderosn -> Sanderson, Mistbornn -> Mistborn).
         Do NOT change names that could be real authors, even if they're unknown to you. When in doubt, preserve the original.
@@ -39,10 +42,30 @@ class IntentParser:
         empty string. If there are no anchor terms in the query, leave terms as an empty array.
         
         Examples:
+        Query: "Recommend me something like Brandon Sanderson's books"
+        Result:
+        {
+            "query_full": "Recommend me something like Brandon Sanderson's books",
+            "query_context_residue": "",
+            "terms": [
+                {"item": "Brandon Sanderson", "item_type": "author", "intent": "similar"}
+            ]
+        }
+        
+        Query: "Recommend me more Brandon Sanderson books"
+        Result:
+        {
+            "query_full": "Recommend me more Brandon Sanderson books",
+            "query_context_residue": "",
+            "terms": [
+                {"item": "Brandon Sanderson", "item_type": "author", "intent": "include"}
+            ]
+        }
+        
         Query: "I liked Mistborn and Stormlight, recommend something similar"
         Result:
         {
-            "query_full": "I liked Mistborn and Stormlight, recommend something similar"
+            "query_full": "I liked Mistborn and Stormlight, recommend something similar",
             "query_context_residue": "",
             "terms": [
                 {"item": "Mistborn", "item_type": "book", "intent": "similar"},
@@ -53,7 +76,7 @@ class IntentParser:
         Query: "Recommend me something by Brandon Sanderson but not Mistborn since I already read it"
         Result:
         {
-            "query_full": "Recommend me something by Brandon Sanderson but not Mistborn since I already read it"
+            "query_full": "Recommend me something by Brandon Sanderson but not Mistborn since I already read it",
             "query_context_residue": "",
             "terms": [
                 {"item": "Brandon Sanderson", "item_type": "author", "intent": "include"},
@@ -64,8 +87,8 @@ class IntentParser:
         Query: "cozy fantasy with a witch protagonist, no grimdark"
         Result:
         {
-            "query_full": "cozy fantasy with a witch protagonist, no grimdark"
-            "query_context_residue": "cozy fantasy with a witch protagonist, no grimdark",
+            "query_full": "cozy fantasy with a witch protagonist, no grimdark",
+            "query_context_residue": "cozy with a witch protagonist",
             "terms": [
                 {"item": "fantasy", "item_type": "genre", "intent": "include"},
                 {"item": "grimdark", "item_type": "genre", "intent": "exclude"}
@@ -75,7 +98,7 @@ class IntentParser:
         Query: "what should I read"
         Result:
         {
-            "query_full": "what should I read
+            "query_full": "what should I read",
             "query_context_residue": "",
             "terms": []
         }
