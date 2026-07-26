@@ -8,6 +8,7 @@ from sentence_transformers import SentenceTransformer
 from app.core.config import settings
 from app.services.intent_parser import IntentParser
 from app.services.qdrant_query_builder import QdrantQueryBuilder
+from app.services.qdrant_query_director import QdrantQueryDirector
 from app.services.qdrant_service import QdrantService
 from app.services.recommendation_service import RecommendationService
 
@@ -36,11 +37,14 @@ def get_qdrant_query_builder(
 )-> QdrantQueryBuilder:
     return QdrantQueryBuilder(client, model)
 
+def get_qdrant_query_director(query_builder: Annotated[QdrantQueryBuilder, Depends(get_qdrant_query_builder)]) -> QdrantQueryDirector:
+    return QdrantQueryDirector(query_builder)
+
 def get_recommendation_service(
     intent_parser: Annotated[IntentParser, Depends(get_intent_parser)],
-    qdrant_query_builder: Annotated[QdrantQueryBuilder, Depends(get_qdrant_query_builder)]
+    qdrant_query_director: Annotated[QdrantQueryDirector, Depends(get_qdrant_query_director)]
 )-> RecommendationService:
-    return RecommendationService(intent_parser, qdrant_query_builder)
+    return RecommendationService(intent_parser, qdrant_query_director)
 
 IntentParserDep = Annotated[IntentParser, Depends(get_intent_parser)]
 RecommendationServiceDep = Annotated[RecommendationService, Depends(get_recommendation_service)]
