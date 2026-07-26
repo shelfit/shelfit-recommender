@@ -8,6 +8,9 @@ from app.utils.string_formatter_util import StringFormatterUtil
 class RecommendRequest(BaseModel):
     query: str
 
+class RecommendResponse(BaseModel):
+    book_ids: List[int]
+
 class IntentItemType(StrEnum):
     AUTHOR = 'author'
     BOOK = 'book'
@@ -36,3 +39,8 @@ class ParsedQueryIntent(BaseModel):
     query_full: str
     query_context_residue: str
     terms: List[IntentTerm]
+
+class FilterClause(StrEnum):
+    MUST = "must"
+    MUST_NOT = "must_not"
+    SHOULD = "should"

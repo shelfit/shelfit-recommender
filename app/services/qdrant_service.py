@@ -1,5 +1,4 @@
 from qdrant_client import QdrantClient
-from app.models import ParsedQueryIntent
 
 
 class QdrantService:

@@ -56,6 +56,11 @@ def main():
         field_name="genres_normalized",
         field_schema=models.PayloadSchemaType.KEYWORD
     )
+    qdrant_client.create_payload_index(
+        collection_name=collection,
+        field_name="num_ratings",
+        field_schema=models.PayloadSchemaType.INTEGER
+    )
 
     vector_data = []
 
