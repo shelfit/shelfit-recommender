@@ -6,6 +6,7 @@ from sentence_transformers import SentenceTransformer
 
 from app.core.config import settings
 from app.models import FilterClause
+from app.services.query_builder.abstract_query_filter import AbstractQueryFilter
 
 
 class QdrantQueryBuilder:
@@ -17,7 +18,7 @@ class QdrantQueryBuilder:
 
         self._collection: str = settings.qdrant_collection_name
         self._query: list[float]|None = None
-        self._filter_clauses: dict[FilterClause, list[FieldCondition]] = { clause: [] for clause in FilterClause }
+        self._query_filters: dict[FilterClause, list[FieldCondition]] = { clause: [] for clause in FilterClause }
         self._with_vectors: bool = False
         self._with_payload: bool|list[str] = True
         self._limit: int = self.DEFAULT_QUERY_LIMIT
@@ -26,34 +27,12 @@ class QdrantQueryBuilder:
         self._query = self.embedding_model.encode(query).tolist()
         return self
 
-    def match(self, filter_clause: FilterClause, key: str, value: bool|int|str)-> Self:
-        self._filter_clauses[filter_clause].append(
-            models.FieldCondition(
-                key=key,
-                match=models.MatchValue(value=value),
-            )
-        )
+    def add_must(self, query_filter: AbstractQueryFilter) -> Self:
+        self._query_filters[FilterClause.MUST].append(query_filter.get_field_condition())
         return self
 
-    def range(self,
-        filter_clause: FilterClause,
-        key: str,
-        gt: float|None = None,
-        gte: float|None = None,
-        lt: float|None = None,
-        lte: float|None = None
-    )-> Self:
-        self._filter_clauses[filter_clause].append(
-            models.FieldCondition(
-                key=key,
-                range=models.Range(
-                    gt=gt,
-                    gte=gte,
-                    lt=lt,
-                    lte=lte,
-                )
-            )
-        )
+    def add_must_not(self, query_filter: AbstractQueryFilter) -> Self:
+        self._query_filters[FilterClause.MUST_NOT].append(query_filter.get_field_condition())
         return self
 
     def with_vectors(self, with_vectors: bool)-> Self:
@@ -76,9 +55,9 @@ class QdrantQueryBuilder:
             collection_name=self._collection,
             query=self._query,
             query_filter=models.Filter(
-                must=self._filter_clauses[FilterClause.MUST] if self._filter_clauses[FilterClause.MUST] else None,
-                must_not=self._filter_clauses[FilterClause.MUST_NOT] if self._filter_clauses[FilterClause.MUST_NOT] else None,
-                should=self._filter_clauses[FilterClause.SHOULD] if self._filter_clauses[FilterClause.SHOULD] else None,
+                must=self._query_filters[FilterClause.MUST] if self._query_filters[FilterClause.MUST] else None,
+                must_not=self._query_filters[FilterClause.MUST_NOT] if self._query_filters[FilterClause.MUST_NOT] else None,
+                should=self._query_filters[FilterClause.SHOULD] if self._query_filters[FilterClause.SHOULD] else None,
             ),
             with_vectors=self._with_vectors,
             with_payload=self._with_payload,

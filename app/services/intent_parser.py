@@ -145,5 +145,5 @@ class IntentParser:
                 StringFormatterUtil.remove_json_markdown(response.choices[0].message.content)
             )
         except ValidationError as e:
-            logging.error(f"Error validating parsed query intent format: {e.message}")
+            logging.error(f"Error validating parsed query intent format: {str(e)}")
             return None
