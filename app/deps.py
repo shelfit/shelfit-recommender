@@ -31,17 +31,15 @@ def get_intent_parser(client: Annotated[OpenAI, Depends(get_openai_client)])-> I
 def get_qdrant_service(client: Annotated[QdrantClient, Depends(get_qdrant_client)])-> QdrantService:
     return QdrantService(client)
 
-def get_qdrant_query_builder(
-    client: Annotated[QdrantClient, Depends(get_qdrant_client)],
-    model: Annotated[SentenceTransformer, Depends(get_embedding_model)]
-)-> QdrantQueryBuilder:
-    return QdrantQueryBuilder(client, model)
+def get_qdrant_query_builder(client: Annotated[QdrantClient, Depends(get_qdrant_client)])-> QdrantQueryBuilder:
+    return QdrantQueryBuilder(client)
 
 def get_qdrant_query_director(
     query_builder: Annotated[QdrantQueryBuilder, Depends(get_qdrant_query_builder)],
-    qdrant_service: Annotated[QdrantService, Depends(get_qdrant_service)]
+    qdrant_service: Annotated[QdrantService, Depends(get_qdrant_service)],
+    model: Annotated[SentenceTransformer, Depends(get_embedding_model)]
 ) -> QdrantQueryDirector:
-    return QdrantQueryDirector(query_builder, qdrant_service)
+    return QdrantQueryDirector(query_builder, qdrant_service, model)
 
 def get_recommendation_service(
     intent_parser: Annotated[IntentParser, Depends(get_intent_parser)],

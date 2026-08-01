@@ -18,5 +18,7 @@ class Settings(BaseSettings):
 
     gateway_mysql_url: str
 
+    qdrant_return_limit: int = 5
+
 
 settings = Settings() # noqa

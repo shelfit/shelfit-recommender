@@ -1,3 +1,4 @@
+import re
 import unicodedata
 
 
@@ -8,6 +9,7 @@ class StringFormatterUtil:
         "ø": "o", "đ": "d", "ð": "d", "ł": "l", "ħ": "h",
         "æ": "ae", "œ": "oe", "þ": "th", "ß": "ss",
     })
+    _SPECIAL_CHARS = re.compile(r"[^a-zA-Z0-9\s]")
 
     @staticmethod
     def remove_json_markdown(model_response: str)-> str:
@@ -25,16 +27,12 @@ class StringFormatterUtil:
     # during embedding and search
     @staticmethod
     def normalize_term(term: str) -> str:
-        # this is to format names like j.r.r. tolkien to jrr_tolkien instead of j.r.r_tolkien
-        if "." in term:
-            term = term.replace(".", "")
-
-        if "'" in term:
-            term = term.replace("'", "")
-
         # brontë -> bronte, so accented source data matches unaccented queries
         term = term.lower().translate(StringFormatterUtil._CHAR_FOLDS)
         term = unicodedata.normalize("NFKD", term)
         term = "".join(c for c in term if not unicodedata.combining(c))
+
+        # remove every special character (anything that isn't a letter, digit, or whitespace)
+        term = StringFormatterUtil._SPECIAL_CHARS.sub("", term)
 
         return "_".join(term.split())

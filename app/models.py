@@ -44,3 +44,21 @@ class FilterClause(StrEnum):
     MUST = "must"
     MUST_NOT = "must_not"
     SHOULD = "should"
+
+class BaseQueryIntent(BaseModel):
+    key: str
+    value: int|str|bool
+
+class IncludeQueryIntent(BaseQueryIntent):
+    pass
+
+class ExcludeQueryIntent(BaseQueryIntent):
+    pass
+
+class SimilarQueryIntent(BaseQueryIntent):
+    positive: list[int|list[float]] = []
+    negative: list[int|list[float]] = []
+
+class SortDirection(StrEnum):
+    ASC = "asc"
+    DESC = "desc"

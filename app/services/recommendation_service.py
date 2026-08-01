@@ -14,10 +14,4 @@ class RecommendationService:
         if parsed_query_intent is None:
             return self.qdrant_query_director.similarity_search(query.query)
 
-        return (
-            self.qdrant_query_director.query(
-                parsed_query_intent.query_context_residue if parsed_query_intent.terms else parsed_query_intent.query_full
-            )
-            .query_filters_from_terms(parsed_query_intent.terms)
-            .execute()
-        )
+        return self.qdrant_query_director.recommendation_query(parsed_query_intent)

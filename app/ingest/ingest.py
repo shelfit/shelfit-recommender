@@ -61,6 +61,11 @@ def main():
         field_name="num_ratings",
         field_schema=models.PayloadSchemaType.INTEGER
     )
+    qdrant_client.create_payload_index(
+        collection_name=collection,
+        field_name="rating",
+        field_schema=models.PayloadSchemaType.FLOAT
+    )
 
     vector_data = []
 
