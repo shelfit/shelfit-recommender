@@ -19,5 +19,5 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/api/recommend")
-def recommend(request: RecommendRequest, recommendation_service: RecommendationServiceDep):
+def recommend(request: RecommendRequest, recommendation_service: RecommendationServiceDep) -> list[int]:
     return recommendation_service.recommend(request)

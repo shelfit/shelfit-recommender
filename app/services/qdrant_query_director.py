@@ -1,4 +1,4 @@
-from qdrant_client.http.models import ScoredPoint, models
+from qdrant_client.http.models import ScoredPoint
 from sentence_transformers import SentenceTransformer
 
 from app.models import IntentItemType, IntentTerm, IntentType, ParsedQueryIntent, IncludeQueryIntent, \
@@ -12,7 +12,6 @@ from app.services.query_builder.similarity_search_request import SimilaritySearc
 
 
 class QdrantQueryDirector:
-    NUM_RESULTS_RETURNED = 5
     MIN_NUM_RATINGS = 10000
     QUERY_TERM_TO_QDRANT_FIELD_MAP = {
         IntentItemType.BOOK: "title_normalized",
@@ -67,8 +66,7 @@ class QdrantQueryDirector:
             .add_must(Range("num_ratings", gte=self.MIN_NUM_RATINGS))
             .execute()
         )
-        points = self._sort_points(results.points, SortDirection.DESC)
-        return points[:self.NUM_RESULTS_RETURNED]
+        return self._sort_points(results.points, SortDirection.DESC)
 
 
     def _include(self, term: IntentTerm) -> IncludeQueryIntent:
@@ -122,5 +120,4 @@ class QdrantQueryDirector:
             .add_must(Range("num_ratings", gte=self.MIN_NUM_RATINGS))
             .execute())
 
-        points = self._sort_points(results.points, SortDirection.DESC)
-        return points[:self.NUM_RESULTS_RETURNED]
+        return self._sort_points(results.points, SortDirection.DESC)
