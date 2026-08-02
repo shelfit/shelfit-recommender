@@ -27,6 +27,10 @@ class StringFormatterUtil:
     # during embedding and search
     @staticmethod
     def normalize_term(term: str) -> str:
+        # vocabulary-parsed terms get an underscore, replace with a space
+        # so it can be returned to an underscore later
+        term = term.replace("_", " ")
+
         # brontë -> bronte, so accented source data matches unaccented queries
         term = term.lower().translate(StringFormatterUtil._CHAR_FOLDS)
         term = unicodedata.normalize("NFKD", term)

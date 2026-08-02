@@ -5,8 +5,10 @@ from openai.types.chat import ChatCompletionSystemMessageParam, \
     ChatCompletionUserMessageParam
 from openai.types.shared_params import ResponseFormatJSONSchema
 from pydantic import ValidationError
+from pygments.formatters import terminal
 
-from app.models import ParsedQueryIntent
+from app.models import ParsedQueryIntent, IntentTerm
+from app.services.query_term_resolver import QueryTermResolver
 from app.utils.string_formatter_util import StringFormatterUtil
 
 
@@ -104,8 +106,9 @@ class IntentParser:
         }
     """
 
-    def __init__(self, client: OpenAI):
+    def __init__(self, client: OpenAI, term_resolver: QueryTermResolver):
         self.client = client
+        self.term_resolver = term_resolver
 
     def parse(self, query_text: str)-> ParsedQueryIntent|None:
         messages = [
@@ -140,10 +143,39 @@ class IntentParser:
             logging.error(f"Error parsing query intent: {e.message}")
             return None
 
+        response_content = response.choices[0].message.content
+        if response_content is None:
+            logging.error(f"Got empty response from chat completion call, skipping intent parsing")
+            return None
+
         try:
-            return ParsedQueryIntent.model_validate_json(
-                StringFormatterUtil.remove_json_markdown(response.choices[0].message.content)
+            parsed_intent = ParsedQueryIntent.model_validate_json(
+                StringFormatterUtil.remove_json_markdown(response_content)
             )
         except ValidationError as e:
             logging.error(f"Error validating parsed query intent format: {str(e)}")
             return None
+
+        resolved_terms, unresolved_terms = [], []
+        for term in parsed_intent.terms:
+            resolved = self._resolve_query_intent_term(term)
+
+            if resolved is not None:
+                resolved_terms.append(resolved)
+            else:
+                unresolved_terms.append(term.item)
+
+        return parsed_intent.model_copy(update={
+            "query_context_residue": " ".join(
+                part for part in [parsed_intent.query_context_residue, *unresolved_terms] if part
+            ),
+            "terms": resolved_terms
+        })
+
+    def _resolve_query_intent_term(self, term: IntentTerm) -> IntentTerm|None:
+        resolved_term = self.term_resolver.resolve(term.item_normalized, term.item_type)
+
+        if resolved_term is None:
+            return None
+
+        return term.model_copy(update={"item": resolved_term})

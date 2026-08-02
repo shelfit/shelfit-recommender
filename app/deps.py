@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends
@@ -10,23 +11,35 @@ from app.services.intent_parser import IntentParser
 from app.services.query_builder.qdrant_query_builder import QdrantQueryBuilder
 from app.services.qdrant_query_director import QdrantQueryDirector
 from app.services.qdrant_service import QdrantService
+from app.services.query_term_resolver import QueryTermResolver
 from app.services.recommendation_service import RecommendationService
+from app.services.vocabulary_store import VocabularyStore
 
-openai_client = OpenAI(api_key=settings.openrouter_api_key)
-qdrant_client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
-embedding_model = SentenceTransformer(settings.embedding_model)
 
+@lru_cache
 def get_openai_client()-> OpenAI:
-    return openai_client
+    return OpenAI(api_key=settings.openrouter_api_key)
 
+@lru_cache
 def get_qdrant_client()-> QdrantClient:
-    return qdrant_client
+    return QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
 
+@lru_cache
 def get_embedding_model() -> SentenceTransformer:
-    return embedding_model
+    return SentenceTransformer(settings.embedding_model)
 
-def get_intent_parser(client: Annotated[OpenAI, Depends(get_openai_client)])-> IntentParser:
-    return IntentParser(client)
+@lru_cache
+def get_vocabulary_store() -> VocabularyStore:
+    return VocabularyStore(get_qdrant_client())
+
+def get_term_resolver(vocabulary_store: Annotated[VocabularyStore, Depends(get_vocabulary_store)]) -> QueryTermResolver:
+    return QueryTermResolver(vocabulary_store)
+
+def get_intent_parser(
+    client: Annotated[OpenAI, Depends(get_openai_client)],
+    term_resolver: Annotated[QueryTermResolver, Depends(get_term_resolver)]
+)-> IntentParser:
+    return IntentParser(client, term_resolver)
 
 def get_qdrant_service(client: Annotated[QdrantClient, Depends(get_qdrant_client)])-> QdrantService:
     return QdrantService(client)
