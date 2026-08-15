@@ -1,4 +1,4 @@
-from app.models import RecommendRequest, IntentType
+from app.models import RecommendRequest
 from app.services.intent_parser import IntentParser
 from app.services.qdrant_query_director import QdrantQueryDirector
 

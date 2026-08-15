@@ -10,7 +10,7 @@ from app.services.query_builder.abstract_query_request import AbstractQueryReque
 
 
 class QdrantQueryBuilder:
-    DEFAULT_QUERY_LIMIT = 20
+    DEFAULT_QUERY_LIMIT = 50
     DEFAULT_WITH_VECTORS = False
     DEFAULT_WITH_PAYLOAD = True
 

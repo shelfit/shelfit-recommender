@@ -12,7 +12,8 @@ from app.services.query_builder.similarity_search_request import SimilaritySearc
 
 
 class QdrantQueryDirector:
-    MIN_NUM_RATINGS = 10000
+    MIN_NUM_RATINGS_DEFAULT = 10000
+    MIN_NUM_RATINGS_RELAXED = 3000
     QUERY_TERM_TO_QDRANT_FIELD_MAP = {
         IntentItemType.BOOK: "title_normalized",
         IntentItemType.AUTHOR: "author_normalized",
@@ -42,12 +43,14 @@ class QdrantQueryDirector:
                     if (intent := self._similar(term)) is not None:
                         query_intent_list.append(intent)
 
+        min_ratings = self.MIN_NUM_RATINGS_RELAXED
         request = None
         for intent in query_intent_list:
             match intent:
                 case SimilarQueryIntent():
                     if request is None:
-                        request = RecommendationSearchRequest(positive=[user_query_encoded])
+                        user_query_positive = [user_query_encoded] if user_query_str else []
+                        request = RecommendationSearchRequest(positive=user_query_positive)
                     request.add_positives(intent.positive).add_negatives(intent.negative)
 
                     if intent.key is not self.QUERY_TERM_TO_QDRANT_FIELD_MAP[IntentItemType.GENRE]:
@@ -56,6 +59,7 @@ class QdrantQueryDirector:
                     self.query_builder.add_must(Match(key=intent.key, value=intent.value))
                 case ExcludeQueryIntent():
                     self.query_builder.add_must_not(Match(key=intent.key, value=intent.value))
+                    min_ratings = self.MIN_NUM_RATINGS_DEFAULT
 
         if request is None:
             request = SimilaritySearchRequest(query=user_query_encoded)
@@ -63,7 +67,7 @@ class QdrantQueryDirector:
         results = (
             self.query_builder
             .query(request)
-            .add_must(Range("num_ratings", gte=self.MIN_NUM_RATINGS))
+            .add_must(Range("num_ratings", gte=min_ratings))
             .execute()
         )
         return self._sort_points(results.points, SortDirection.DESC)
@@ -117,7 +121,7 @@ class QdrantQueryDirector:
 
         results = (self.query_builder
             .query(SimilaritySearchRequest(query_encoded))
-            .add_must(Range("num_ratings", gte=self.MIN_NUM_RATINGS))
+            .add_must(Range("num_ratings", gte=self.MIN_NUM_RATINGS_DEFAULT))
             .execute())
 
         return self._sort_points(results.points, SortDirection.DESC)

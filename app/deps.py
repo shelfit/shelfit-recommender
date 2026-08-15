@@ -62,3 +62,4 @@ def get_recommendation_service(
 
 IntentParserDep = Annotated[IntentParser, Depends(get_intent_parser)]
 RecommendationServiceDep = Annotated[RecommendationService, Depends(get_recommendation_service)]
+QueryDirectorDep = Annotated[QdrantQueryDirector, Depends(get_qdrant_query_director)]

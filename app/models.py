@@ -11,6 +11,11 @@ class RecommendRequest(BaseModel):
 class RecommendResponse(BaseModel):
     book_ids: List[int]
 
+class SearchRequest(BaseModel):
+    query: str
+    limit: int = 10
+    offset: int = 0
+
 class IntentItemType(StrEnum):
     AUTHOR = 'author'
     BOOK = 'book'

@@ -3,8 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.deps import RecommendationServiceDep, get_vocabulary_store
-from app.models import RecommendRequest
+from app.deps import RecommendationServiceDep, get_vocabulary_store, QueryDirectorDep
+from app.models import RecommendRequest, SearchRequest
 
 
 @asynccontextmanager
@@ -19,5 +19,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/api/recommend")
-def recommend(request: RecommendRequest, recommendation_service: RecommendationServiceDep) -> list[int]:
+def recommend(request: RecommendRequest, recommendation_service: RecommendationServiceDep):
     return recommendation_service.recommend(request)
+
+@app.post("/api/search")
+def search(request: SearchRequest, query_director: QueryDirectorDep):
+    results = query_director.similarity_search(request.query)
+    result_ids = [point.payload['id'] for point in results]
+    return result_ids[request.offset:(request.offset + request.limit)]
