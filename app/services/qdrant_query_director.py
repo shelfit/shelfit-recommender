@@ -1,14 +1,15 @@
 from qdrant_client.http.models import ScoredPoint
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from app.models import IntentItemType, IntentTerm, IntentType, ParsedQueryIntent, IncludeQueryIntent, \
-    ExcludeQueryIntent, SimilarQueryIntent, SortDirection
+    ExcludeQueryIntent, SimilarQueryIntent, SortDirection, RankedPoint
 from app.services.query_builder.match import Match
 from app.services.query_builder.qdrant_query_builder import QdrantQueryBuilder
 from app.services.qdrant_service import QdrantService
 from app.services.query_builder.range import Range
 from app.services.query_builder.recommendation_search_request import RecommendationSearchRequest
 from app.services.query_builder.similarity_search_request import SimilaritySearchRequest
+from app.utils.string_formatter_util import StringFormatterUtil
 
 
 class QdrantQueryDirector:
@@ -20,13 +21,21 @@ class QdrantQueryDirector:
         IntentItemType.GENRE: "genres_normalized",
     }
 
-    SIMILARITY_SORT_WEIGHT = 0.7
-    RATING_SORT_WEIGHT = 0.3
+    RECOMMENDATION_QUERY_LIMIT = 100
 
-    def __init__(self, query_builder: QdrantQueryBuilder, qdrant_service: QdrantService, embedding_model: SentenceTransformer):
+    RELEVANCE_SORT_WEIGHT = 0.85
+    RATING_SORT_WEIGHT = 0.15
+
+    def __init__(self,
+        query_builder: QdrantQueryBuilder,
+        qdrant_service: QdrantService,
+        embedding_model: SentenceTransformer,
+        reranking_model: CrossEncoder,
+    ):
         self.query_builder = query_builder
         self.qdrant_service = qdrant_service
         self.embedding_model = embedding_model
+        self.reranking_model = reranking_model
 
     def recommendation_query(self, query_intent: ParsedQueryIntent) -> list[ScoredPoint]:
         if query_intent.query_expanded:
@@ -74,9 +83,17 @@ class QdrantQueryDirector:
             self.query_builder
             .query(request)
             .add_must(Range("num_ratings", gte=min_ratings))
+            .limit(self.RECOMMENDATION_QUERY_LIMIT)
             .execute()
         )
-        return self._sort_points(results.points, SortDirection.DESC)
+
+        if not self._is_rerankable(query_intent):
+            return self._sort_points(self._as_ranked_points(results.points), SortDirection.DESC)
+
+        rerank_query = query_intent.query_expanded if query_intent.query_expanded else query_intent.query_full
+        results_reranked = self._rerank_points(results.points, rerank_query)
+
+        return self._sort_points(results_reranked, SortDirection.DESC)
 
 
     def _include(self, term: IntentTerm) -> IncludeQueryIntent:
@@ -115,31 +132,57 @@ class QdrantQueryDirector:
             negative=[]
         )
 
-    def _sort_points(self, points: list[ScoredPoint], direction: SortDirection) -> list[ScoredPoint]:
+    def _is_rerankable(self, query_intent: ParsedQueryIntent) -> bool:
+        if query_intent.query_expanded:
+            return True
+
+        if not query_intent.terms:
+            return True
+
+        return any(term.intent is IntentType.SIMILAR for term in query_intent.terms)
+
+    def _rerank_points(self, points: list[ScoredPoint], query: str) -> list[RankedPoint]:
         if not points:
             return []
 
-        similarities = [p.score for p in points]
-        ratings = [p.payload["rating"] for p in points]
+        pairs = [(query, StringFormatterUtil.format_reranking_string(point)) for point in points]
+        scores = self.reranking_model.predict(pairs)
 
-        similarity_range = (min(similarities), max(similarities))
+        return [
+            RankedPoint(point=point, relevance=score)
+            for point, score in zip(points, scores)
+        ]
+
+    @staticmethod
+    def _as_ranked_points(points: list[ScoredPoint]) -> list[RankedPoint]:
+        return [RankedPoint(point=point, relevance=point.score) for point in points]
+
+    def _sort_points(self, points: list[RankedPoint], direction: SortDirection) -> list[ScoredPoint]:
+        if not points:
+            return []
+
+        relevances = [p.relevance for p in points]
+        ratings = [p.point.payload["rating"] for p in points]
+
+        relevance_range = (min(relevances), max(relevances))
         rating_range = (min(ratings), max(ratings))
 
-        return sorted(
+        points_sorted = sorted(
             points,
-            key=lambda p: self._normalize_point_score(p, similarity_range, rating_range),
+            key=lambda p: self._normalize_point_score(p, relevance_range, rating_range),
             reverse=direction is SortDirection.DESC
         )
+        return [p.point for p in points_sorted]
 
     def _normalize_point_score(self,
-        point: ScoredPoint,
-        similarity_range: tuple[float, float],
+        point: RankedPoint,
+        relevance_range: tuple[float, float],
         rating_range: tuple[float, float]
     ) -> float:
-        similarity_norm = self._normalize(point.score, *similarity_range)
-        rating_norm = self._normalize(point.payload["rating"], *rating_range)
+        relevance_norm = self._normalize(point.relevance, *relevance_range)
+        rating_norm = self._normalize(point.point.payload["rating"], *rating_range)
 
-        return similarity_norm * self.SIMILARITY_SORT_WEIGHT + rating_norm * self.RATING_SORT_WEIGHT
+        return relevance_norm * self.RELEVANCE_SORT_WEIGHT + rating_norm * self.RATING_SORT_WEIGHT
 
     @staticmethod
     def _normalize(value: float, low: float, high: float) -> float:
@@ -153,4 +196,4 @@ class QdrantQueryDirector:
             .add_must(Range("num_ratings", gte=self.MIN_NUM_RATINGS_DEFAULT))
             .execute())
 
-        return self._sort_points(results.points, SortDirection.DESC)
+        return self._sort_points(self._as_ranked_points(results.points), SortDirection.DESC)

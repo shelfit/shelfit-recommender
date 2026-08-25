@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import Depends
 from openai import OpenAI
 from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from app.core.config import settings
 from app.services.intent_parser import IntentParser
@@ -29,6 +29,10 @@ def get_embedding_model() -> SentenceTransformer:
     return SentenceTransformer(settings.embedding_model)
 
 @lru_cache
+def get_reranking_model() -> CrossEncoder:
+    return CrossEncoder(settings.reranking_model)
+
+@lru_cache
 def get_vocabulary_store() -> VocabularyStore:
     return VocabularyStore(get_qdrant_client())
 
@@ -50,9 +54,10 @@ def get_qdrant_query_builder(client: Annotated[QdrantClient, Depends(get_qdrant_
 def get_qdrant_query_director(
     query_builder: Annotated[QdrantQueryBuilder, Depends(get_qdrant_query_builder)],
     qdrant_service: Annotated[QdrantService, Depends(get_qdrant_service)],
-    model: Annotated[SentenceTransformer, Depends(get_embedding_model)]
+    model: Annotated[SentenceTransformer, Depends(get_embedding_model)],
+    reranker: Annotated[CrossEncoder, Depends(get_reranking_model)],
 ) -> QdrantQueryDirector:
-    return QdrantQueryDirector(query_builder, qdrant_service, model)
+    return QdrantQueryDirector(query_builder, qdrant_service, model, reranker)
 
 def get_recommendation_service(
     intent_parser: Annotated[IntentParser, Depends(get_intent_parser)],

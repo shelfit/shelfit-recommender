@@ -1,6 +1,7 @@
 from enum import StrEnum
 from typing import List
 from pydantic import BaseModel, ConfigDict, computed_field
+from qdrant_client.http.models import ScoredPoint
 
 from app.utils.string_formatter_util import StringFormatterUtil
 
@@ -68,3 +69,7 @@ class SimilarQueryIntent(BaseQueryIntent):
 class SortDirection(StrEnum):
     ASC = "asc"
     DESC = "desc"
+
+class RankedPoint(BaseModel):
+    point: ScoredPoint
+    relevance: float

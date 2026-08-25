@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.deps import RecommendationServiceDep, get_vocabulary_store, QueryDirectorDep
+from app.deps import RecommendationServiceDep, get_vocabulary_store, QueryDirectorDep, \
+    get_embedding_model, get_reranking_model
 from app.models import RecommendRequest, SearchRequest
 
 
@@ -14,7 +15,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logging.error(f"Error in lifespan: {str(e)}")
 
+    try:
+        _warm_up_models()
+    except Exception as e:
+        logging.error(f"Error warming up models: {str(e)}")
+
     yield
+
+
+def _warm_up_models():
+    get_embedding_model().encode("warm up")
+    get_reranking_model().predict([("warm up", "warm up")])
 
 app = FastAPI(lifespan=lifespan)
 

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     qdrant_port: int
     qdrant_collection_name: str = "books"
     embedding_model: str = "all-MiniLM-L6-v2"
+    reranking_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
     openrouter_base_uri: str
     openrouter_api_key: str

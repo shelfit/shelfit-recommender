@@ -1,6 +1,8 @@
 import re
 import unicodedata
 
+from qdrant_client.http.models import ScoredPoint
+
 
 class StringFormatterUtil:
     # characters with no NFKD decomposition, so they survive the combining-mark
@@ -10,6 +12,8 @@ class StringFormatterUtil:
         "æ": "ae", "œ": "oe", "þ": "th", "ß": "ss",
     })
     _SPECIAL_CHARS = re.compile(r"[^a-zA-Z0-9\s]")
+
+    _RERANKING_STRING_FORMAT = "{title} by {author}. {description}"
 
     @staticmethod
     def remove_json_markdown(model_response: str)-> str:
@@ -40,3 +44,11 @@ class StringFormatterUtil:
         term = StringFormatterUtil._SPECIAL_CHARS.sub("", term)
 
         return "_".join(term.split())
+
+    @staticmethod
+    def format_reranking_string(point: ScoredPoint) -> str:
+        return StringFormatterUtil._RERANKING_STRING_FORMAT.format(
+            title=point.payload["title"],
+            author=point.payload["author"],
+            description=point.payload["description"]
+        )
