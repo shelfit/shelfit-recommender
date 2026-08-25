@@ -5,6 +5,15 @@ from app.services.vocabulary_store import VocabularyStore
 
 
 class QueryTermResolver:
+    ALIASES = {
+        IntentItemType.GENRE: {
+            "sci_fi": "science_fiction",
+            "scifi": "science_fiction",
+            "non_fiction": "nonfiction",
+            "ya": "young_adult"
+        }
+    }
+
     SCORE_CUTOFF = 85
     MATCH_LIMIT = 50
     MATCH_LENGTH_CUTOFF = 0.6
@@ -14,6 +23,7 @@ class QueryTermResolver:
         self._vocabulary_store = vocabulary_store
 
     def resolve(self, term: str, term_type: IntentItemType) -> str|None:
+        term = self.ALIASES.get(term_type, {}).get(term, term)
         vocabulary = self._vocabulary_store.get_vocabularies()[term_type]
 
         if term in vocabulary.keys():

@@ -44,6 +44,7 @@ class ParsedQueryIntent(BaseModel):
     query_full: str
     query_context_residue: str
     terms: List[IntentTerm]
+    query_expanded: str
 
 class FilterClause(StrEnum):
     MUST = "must"

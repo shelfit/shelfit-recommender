@@ -29,7 +29,13 @@ class QdrantQueryDirector:
         self.embedding_model = embedding_model
 
     def recommendation_query(self, query_intent: ParsedQueryIntent) -> list[ScoredPoint]:
-        user_query_str = query_intent.query_context_residue if query_intent.terms else query_intent.query_full
+        if query_intent.query_expanded:
+            user_query_str = query_intent.query_expanded
+        elif query_intent.terms:
+            user_query_str = ""
+        else:
+            user_query_str = query_intent.query_full
+
         user_query_encoded = self.embedding_model.encode(user_query_str).tolist()
 
         query_intent_list: list[IncludeQueryIntent | ExcludeQueryIntent | SimilarQueryIntent] = []
