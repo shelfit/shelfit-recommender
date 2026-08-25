@@ -18,5 +18,7 @@ class RecommendationService:
         else:
             results = self.qdrant_query_director.recommendation_query(parsed_query_intent)
 
+        return results
+
         results_ids = [point.payload["id"] for point in results]
         return results_ids[:self.NUM_RESULTS_RECOMMENDED]

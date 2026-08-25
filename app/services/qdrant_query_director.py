@@ -116,11 +116,34 @@ class QdrantQueryDirector:
         )
 
     def _sort_points(self, points: list[ScoredPoint], direction: SortDirection) -> list[ScoredPoint]:
+        if not points:
+            return []
+
+        similarities = [p.score for p in points]
+        ratings = [p.payload["rating"] for p in points]
+
+        similarity_range = (min(similarities), max(similarities))
+        rating_range = (min(ratings), max(ratings))
+
         return sorted(
             points,
-            key=lambda p: p.score * self.SIMILARITY_SORT_WEIGHT + (p.payload["rating"] / 5) * self.RATING_SORT_WEIGHT,
+            key=lambda p: self._normalize_point_score(p, similarity_range, rating_range),
             reverse=direction is SortDirection.DESC
         )
+
+    def _normalize_point_score(self,
+        point: ScoredPoint,
+        similarity_range: tuple[float, float],
+        rating_range: tuple[float, float]
+    ) -> float:
+        similarity_norm = self._normalize(point.score, *similarity_range)
+        rating_norm = self._normalize(point.payload["rating"], *rating_range)
+
+        return similarity_norm * self.SIMILARITY_SORT_WEIGHT + rating_norm * self.RATING_SORT_WEIGHT
+
+    @staticmethod
+    def _normalize(value: float, low: float, high: float) -> float:
+        return (value - low) / (high - low) if high > low else 0.0
 
     def similarity_search(self, query: str) -> list[ScoredPoint]:
         query_encoded = self.embedding_model.encode(query).tolist()
